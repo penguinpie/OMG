@@ -1,91 +1,70 @@
-#include <Adafruit_MPU6050.h>
+#include <Adafruit_MPU6050.h> //adafruit library import. (for MPU)
 #include <Adafruit_Sensor.h>
-#include <Wire.h>
-
-
-
-//worm gear dc motor
-int WG_EN = 12;
-int WG_Pin1 = 13;
-int WG_Pin2 = 14;
-const int WGfreq = 3000;
-const int WGpwmChannel = 0;
-const int WGresolution = 8;
-int WGdutyCycle = 200;
+#include <Wire.h> //wire.h library import. (for i2c communication)
 
 //photo sensor
-int Dstate = 0;
+int Dstate = 0; //Dstate initialization
 
 //setting dc motor PWM properties
-int DC_EN1 = 2;
-int DC_motor1Pin1 = 0;
-int DC_motor1Pin2 = 4;
-const int DCfreq = 3000;
-const int DCpwmChannel = 0;
-const int DCresolution = 8;
-int DCdutyCycle = 200;
+int DC_EN1 = 2; //enable pin 
+int DC_motor1Pin1 = 0;  //motorpin1
+int DC_motor1Pin2 = 4;  //motorpin2
+const int DCfreq = 3000;  //frequency: 3000
+const int DCpwmChannel = 0; //DCpwnChannel: 0
+const int DCresolution = 8; //DCresolution: 8
+int DCdutyCycle = 200; //DCdutyCycle : 200
 
 
 //MPU setup for acceleration calculation
-Adafruit_MPU6050 mpu;
-float ax_cal = 0.0;
-float ay_cal = 0.0;
-float az_cal = 0.0;
-float ax_fil = 0.0;
-float ay_fil = 0.0;
-float az_fil = 0.0;
-float total_ac = 0.0;
+Adafruit_MPU6050 mpu; //MPU setup
+float ax_cal = 0.0; //ax_cal = 0
+float ay_cal = 0.0; //ay_cal = 0
+float az_cal = 0.0; //az_cal = 0
+float ax_fil = 0.0; //filter
+float ay_fil = 0.0; //filter
+float az_fil = 0.0; //filter
+float total_ac = 0.0; // total_acceleration
 float alpha = 0.8; // 필터 강도 조절 파라미터 (0.0 ~ 1.0)
 
 void setup(void) {
-  
-  //set WG motor pins as outputs;
-  pinMode(WG_Pin1, OUTPUT);
-  pinMode(WG_Pin2, OUTPUT);
-  pinMode(WG_EN, OUTPUT);
-  ledcSetup(WGpwmChannel, WGfreq, WGresolution);
-  ledcAttachPin(WG_EN, WGpwmChannel);
 
   //set dc motor pins as outputs;
-  pinMode(DC_motor1Pin1, OUTPUT);
-  pinMode(DC_motor1Pin2, OUTPUT);
-  pinMode(DC_EN1, OUTPUT);
-  ledcSetup(DCpwmChannel, DCfreq, DCresolution);
-  ledcAttachPin(DC_EN1, DCpwmChannel);
+  pinMode(DC_motor1Pin1, OUTPUT); // DC motor pin1
+  pinMode(DC_motor1Pin2, OUTPUT); // DC motor pin2
+  pinMode(DC_EN1, OUTPUT); //DC_EN1
+  ledcSetup(DCpwmChannel, DCfreq, DCresolution); // for using pwm
+  ledcAttachPin(DC_EN1, DCpwmChannel); // for using pwm
 
-  Serial.begin(115200);
-  while (!Serial)
+  Serial.begin(115200); //baud rate 115200
+  while (!Serial) // Serial이 아닌 동안
     delay(10); // will pause Zero, Leonardo, etc until serial console opens
 
   // MPU6050 setup
   mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
-  mpu.setGyroRange(MPU6050_RANGE_500_DEG);
-  mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
-
-  digitalWrite(WG_Pin1, LOW);
-  digitalWrite(WG_Pin2, LOW);
-  delay(5000);
-
+  mpu.setGyroRange(MPU6050_RANGE_500_DEG); 
+  mpu.setFilterBandwidth(MPU6050_BAND_21_HZ); 
+  print("Setup complete\n");
+  delay(1000);
 }
 
 void loop() {
 
   //MPU6050
   /* Get new sensor events with the readings */
-  sensors_event_t a, g, temp;
-  mpu.getEvent(&a, &g, &temp);
-  ax_cal = ax_cal * alpha + (1.0 - alpha) * a.acceleration.x;
-  ay_cal = ay_cal * alpha + (1.0 - alpha) * a.acceleration.y;
-  az_cal = az_cal * alpha + (1.0 - alpha) * (a.acceleration.z-9.8);
+  sensors_event_t a, g, temp; //sensors_event
+  mpu.getEvent(&a, &g, &temp); //getEvent
+  ax_cal = ax_cal * alpha + (1.0 - alpha) * a.acceleration.x; //acceleration filtering
+  ay_cal = ay_cal * alpha + (1.0 - alpha) * a.acceleration.y; //acceleration filtering
+  az_cal = az_cal * alpha + (1.0 - alpha) * (a.acceleration.z-9.8); //acceleration filtering
   ax_fil = a.acceleration.x - ax_cal;
   ay_fil = a.acceleration.y - ay_cal;
   az_fil = a.acceleration.z - az_cal;
-  total_ac = sqrt(ax_fil * ax_fil + ay_fil * ay_fil + az_fil * az_fil); 
+  total_ac = sqrt(ax_fil * ax_fil + ay_fil * ay_fil + az_fil * az_fil); //total acceleration 
   Serial.println("\ntotal: ");
   Serial.print(total_ac);
 
   //photodiode sensor
-  int IsBall = digitalRead(16);
+  int IsBall = digitalRead(16); //read photosensor
   int IsBug = digitalRead(17);
   
   /* Print out the values */
@@ -114,8 +93,8 @@ void loop() {
          if (IsBall==LOW){
       digitalWrite(DC_motor1Pin1, LOW);
       digitalWrite(DC_motor1Pin2, LOW); //dc stop
-      digitalWrite(WG_Pin1, LOW);
-      digitalWrite(WG_Pin2, HIGH); //contnraction at maximum speed
+      //digitalWrite(WG_Pin1, LOW);
+      //digitalWrite(WG_Pin2, HIGH); //contnraction at maximum speed
          }
       else(IsBall==HIGH){
         Serial.println("ball");
